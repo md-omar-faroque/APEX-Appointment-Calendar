@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>APEX Appointment Calendar Demo</title>
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.css" rel="stylesheet">
+  <link href="../src/apex-appointment-calendar.css" rel="stylesheet">
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 2rem auto; max-width: 980px; padding: 0 1rem; color: #1f2937; }
+    .panel { border: 1px solid #d8dee8; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+    .controls { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    button, input { font: inherit; padding: .5rem .75rem; }
+    button { cursor: pointer; border: 1px solid #cbd5e1; background: #fff; border-radius: 7px; }
+    #calendar { margin-top: 1rem; }
+    #selected { font-weight: 700; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Appointment calendar</h1>
+  <p class="muted">Standalone demonstration of the date-selection rules. The input simulates the APEX page item.</p>
+  <section class="panel">
+    <div class="controls">
+      <label for="pageItem">P1024050_APPOINT_DATE</label>
+      <input id="pageItem" value="" readonly>
+      <button id="today">Today → page item</button>
+      <button id="prevDay">Previous day</button>
+      <button id="nextDay">Next day</button>
+      <button id="nextMonth">Next month</button>
+    </div>
+    <p>Selected date: <span id="selected">None</span></p>
+    <p id="message" class="muted" aria-live="polite">Choose today or a future date.</p>
+  </section>
+  <div id="calendar" class="panel"></div>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
+  <script src="../src/apex-appointment-calendar.js"></script>
+  <script>
+    (function () {
+      const item = document.getElementById("pageItem");
+      const selected = document.getElementById("selected");
+      const message = document.getElementById("message");
+      const today = new Date(); today.setHours(0,0,0,0);
+      let chosen = new Date(today);
+
+      function iso(d) {
+        return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+      }
+      function display(d) {
+        return String(d.getDate()).padStart(2,"0") + "/" + String(d.getMonth()+1).padStart(2,"0") + "/" + d.getFullYear();
+      }
+      function setDate(d, source) {
+        const value = new Date(d); value.setHours(0,0,0,0);
+        if (value < today) {
+          message.textContent = "Past dates cannot be selected.";
+          return false;
+        }
+        chosen = value;
+        item.value = display(value);
+        selected.textContent = item.value;
+        message.textContent = source || "Date selected.";
+        calendar.gotoDate(value);
+        calendar.render();
+        return true;
+      }
+      const calendar = new FullCalendar.Calendar(document.getElementById("calendar"), {
+        initialView: "dayGridMonth",
+        initialDate: today,
+        validRange: { start: iso(today) },
+        headerToolbar: { left: "prev,next myToday", center: "title", right: "dayGridMonth" },
+        customButtons: {
+          myToday: { text: "Today", click: function () { setDate(today, "Today selected and written to the page item."); } }
+        },
+        dateClick: function (info) {
+          const parts = info.dateStr.split("-").map(Number);
+          setDate(new Date(parts[0], parts[1]-1, parts[2]), "Calendar date selected and written to the page item.");
+        },
+        dayCellClassNames: function (arg) {
+          const d = new Date(arg.date); d.setHours(0,0,0,0);
+          const classes = [];
+          if (d < today) classes.push("apex-cal-past-date");
+          if (iso(d) === iso(chosen)) classes.push("apex-cal-selected-date");
+          return classes;
+        }
+      });
+      calendar.render();
+      setDate(today, "Today is selected by default.");
+
+      document.getElementById("today").onclick = () => setDate(today, "Today selected and written to the page item.");
+      document.getElementById("prevDay").onclick = () => { const d = new Date(chosen); d.setDate(d.getDate()-1); setDate(d, "Custom previous-day navigation."); };
+      document.getElementById("nextDay").onclick = () => { const d = new Date(chosen); d.setDate(d.getDate()+1); setDate(d, "Custom next-day navigation."); };
+      document.getElementById("nextMonth").onclick = () => {
+        const d = new Date(chosen); d.setDate(1); d.setMonth(d.getMonth()+1); setDate(d, "Custom next-month navigation.");
+      };
+    }());
+  </script>
+</body>
+</html>
